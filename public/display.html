@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance QR</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card wide">
+    <h1>Scan to Mark Attendance</h1>
+    <img id="qr" alt="QR code loading...">
+    <p>New code in <b id="timer">60</b> seconds</p>
+
+    <h2>Present today (<span id="count">0</span>)</h2>
+    <table>
+      <thead><tr><th>#</th><th>Roll No</th><th>Name</th><th>Time</th></tr></thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let seconds = 60;
+
+    // Get a fresh QR image from the server.
+    // The server tells us how many seconds this QR has left.
+    async function loadQR() {
+      const res = await fetch("/api/qr");
+      const data = await res.json();
+      document.getElementById("qr").src = data.image;
+      seconds = data.seconds_left;
+    }
+
+    // Get the list of students who are present
+    async function loadList() {
+      const res = await fetch("/api/list");
+      const students = await res.json();
+
+      document.getElementById("count").innerText = students.length;
+
+      let rows = "";
+      students.forEach((s, i) => {
+        rows += `<tr><td>${i + 1}</td><td>${s.roll}</td><td>${s.name}</td><td>${s.time}</td></tr>`;
+      });
+      document.getElementById("list").innerHTML = rows;
+    }
+
+    // Countdown every second, get the new QR when it hits 0
+    setInterval(() => {
+      seconds--;
+      if (seconds <= 0) loadQR();
+      document.getElementById("timer").innerText = Math.max(seconds, 0);
+    }, 1000);
+
+    // Refresh the list every 3 seconds
+    setInterval(loadList, 3000);
+
+    loadQR();
+    loadList();
+  </script>
+</body>
+</html>

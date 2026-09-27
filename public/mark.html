@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mark Attendance</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card">
+    <h1>Mark Attendance</h1>
+
+    <form id="form" style="display: none">
+      <label>Name</label>
+      <input id="name" placeholder="Your full name" required>
+
+      <label>Roll No</label>
+      <input id="roll" placeholder="Your roll number" required>
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <p id="message">Checking QR code...</p>
+  </div>
+
+  <script>
+    // Read the token from the URL:  mark.html?token=abc123
+    const token = new URLSearchParams(window.location.search).get("token");
+    const msg = document.getElementById("message");
+    let passCode = "";
+
+    // Step 1: as soon as the page opens, ask the server if this QR is still valid
+    async function checkQR() {
+      const res = await fetch("/api/scan?token=" + token);
+      const data = await res.json();
+
+      if (data.ok) {
+        passCode = data.pass_code;
+        msg.innerText = "";
+        document.getElementById("form").style.display = "block";
+      } else {
+        msg.innerText = data.message;
+        msg.className = "error";
+      }
+    }
+    checkQR();
+
+    // Step 2: send name + roll no when the student clicks Submit
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault(); // stop the page from reloading
+
+      const res = await fetch("/api/mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: document.getElementById("name").value,
+          roll: document.getElementById("roll").value,
+          pass_code: passCode,
+        }),
+      });
+      const data = await res.json();
+
+      msg.innerText = data.message;
+      msg.className = data.ok ? "success" : "error";
+
+      if (data.ok) document.getElementById("form").style.display = "none";
+    });
+  </script>
+</body>
+</html>
